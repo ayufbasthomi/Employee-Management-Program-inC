@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <regex.h>
+#include <ctype.h>
 
 #define FILENAME "employees.txt"
 #define MAX_EMPLOYEES 100
@@ -18,19 +18,35 @@ typedef struct {
 Employee employees[MAX_EMPLOYEES];
 int employeeCount = 0;
 
-// Validate input using regular expressions
-int isValid(const char *input, const char *pattern) {
-    regex_t regex;
-    int result;
-
-    if (regcomp(&regex, pattern, REG_EXTENDED) != 0) {
-        return 0; // Invalid regex
+// Helper function to validate ID (3-digit numeric)
+int isValidID(const char *id) {
+    if (strlen(id) != 3) return 0;
+    for (int i = 0; i < 3; i++) {
+        if (!isdigit(id[i])) return 0;
     }
+    return 1;
+}
 
-    result = regexec(&regex, input, 0, NULL, 0);
-    regfree(&regex);
+// Helper function to validate phone number (XX-XXX-XXXX or XXX-XXXX-XXXX)
+int isValidPhone(const char *phone) {
+    int len = strlen(phone);
+    if (len < 11 || len > 13) return 0; // Check overall length
+    if (phone[2] != '-' && phone[3] != '-') return 0; // Check for dash at the right place
+    for (int i = 0; i < len; i++) {
+        if (i == 2 || i == 6) {
+            if (phone[i] != '-') return 0; // Ensure dashes are in the right places
+        } else if (!isdigit(phone[i])) {
+            return 0; // Ensure all other characters are digits
+        }
+    }
+    return 1;
+}
 
-    return result == 0;
+// Helper function to validate email format
+int isValidEmail(const char *email) {
+    const char *at = strchr(email, '@');
+    const char *dot = strrchr(email, '.');
+    return (at && dot && at < dot && (dot - at) > 1 && strlen(dot) > 1);
 }
 
 // Load employees from file
@@ -87,7 +103,7 @@ void addEmployee() {
     Employee emp;
     printf("Enter Employee ID (3-digit numeric): ");
     scanf("%s", emp.id);
-    if (!isValid(emp.id, "^[0-9]{3}$")) {
+    if (!isValidID(emp.id)) {
         printf("Invalid ID format! Must be 3 digits.\n");
         return;
     }
@@ -104,9 +120,9 @@ void addEmployee() {
     fgets(emp.name, MAX_STRING, stdin);
     emp.name[strcspn(emp.name, "\n")] = 0;
 
-    printf("Enter Phone Number (XX-XXX-XXXX): ");
+    printf("Enter Phone Number (XX-XXX-XXXX or XXX-XXXX-XXXX): ");
     scanf("%s", emp.phone);
-    if (!isValid(emp.phone, "^[0-9]{2,3}-[0-9]{3,4}-[0-9]{4}$")) {
+    if (!isValidPhone(emp.phone)) {
         printf("Invalid phone number format!\n");
         return;
     }
@@ -118,7 +134,7 @@ void addEmployee() {
 
     printf("Enter Email Address: ");
     scanf("%s", emp.email);
-    if (!isValid(emp.email, "^[_a-z0-9-]+(\\.[_a-z0-9-]+)*@(?:\\w+\\.)+\\w+$")) {
+    if (!isValidEmail(emp.email)) {
         printf("Invalid email address format!\n");
         return;
     }
@@ -177,7 +193,7 @@ void editEmployee() {
             printf("Enter New Phone (leave blank to keep current): ");
             char phone[MAX_STRING];
             fgets(phone, MAX_STRING, stdin);
-            if (strcmp(phone, "\n") != 0 && isValid(phone, "^[0-9]{2,3}-[0-9]{3,4}-[0-9]{4}$")) {
+            if (strcmp(phone, "\n") != 0 && isValidPhone(phone)) {
                 phone[strcspn(phone, "\n")] = 0;
                 strcpy(employees[i].phone, phone);
             }
@@ -193,7 +209,7 @@ void editEmployee() {
             printf("Enter New Email (leave blank to keep current): ");
             char email[MAX_STRING];
             fgets(email, MAX_STRING, stdin);
-            if (strcmp(email, "\n") != 0 && isValid(email, "^[_a-z0-9-]+(\\.[_a-z0-9-]+)*@(?:\\w+\\.)+\\w+$")) {
+            if (strcmp(email, "\n") != 0 && isValidEmail(email)) {
                 email[strcspn(email, "\n")] = 0;
                 strcpy(employees[i].email, email);
             }
